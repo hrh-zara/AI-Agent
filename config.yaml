@@ -1,0 +1,57 @@
+# English-Hausa Translator Configuration
+
+# Model settings
+model:
+  name: "english-hausa-translator"
+  architecture: "mT5"  # Multilingual T5 model
+  base_model: "google/mt5-small"  # Start with small model for faster training
+  max_length: 512
+  beam_size: 5
+  
+# Training parameters
+training:
+  batch_size: 16
+  learning_rate: 5e-5
+  num_epochs: 10
+  warmup_steps: 1000
+  save_strategy: "epoch"
+  evaluation_strategy: "steps"
+  eval_steps: 500
+  logging_steps: 100
+  
+# Data settings
+data:
+  source_lang: "en"  # English
+  target_lang: "ha"  # Hausa
+  max_train_samples: null  # Use all available data
+  max_eval_samples: 1000
+  test_split: 0.1
+  validation_split: 0.1
+  
+# Preprocessing
+preprocessing:
+  remove_duplicates: true
+  min_length: 5
+  max_length: 200
+  normalize_text: true
+  remove_special_chars: false  # Keep for Hausa diacritics
+  
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  max_concurrent_requests: 10
+  timeout: 30
+  
+# Web app settings  
+web_app:
+  title: "English-Hausa Translator for NGOs"
+  description: "AI-powered translation tool for humanitarian work in Northern Nigeria"
+  max_text_length: 1000
+  
+# Paths
+paths:
+  data_dir: "./data"
+  models_dir: "./models"
+  logs_dir: "./logs"
+  outputs_dir: "./outputs"
