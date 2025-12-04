@@ -87,6 +87,12 @@ async def startup_event():
     # Setup logging
     logger = setup_logging()
     logger.info("Starting English-Hausa Translator API...")
+    # Respect DEMO_MODE environment variable to skip heavy model loading
+    demo_mode = str(os.environ.get('DEMO_MODE', '')).lower() in ('1', 'true', 'yes')
+    if demo_mode:
+        logger.info("DEMO_MODE enabled - skipping model loading. API will run in demo mode.")
+        translator = None
+        return
     
     try:
         # Load configuration
