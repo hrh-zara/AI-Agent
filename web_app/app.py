@@ -189,7 +189,9 @@ with tab1:
                     
                     if response.status_code == 200:
                         result = response.json()
-                        translated_text = result.get('translated_text', 'No translation received')
+                        # API returns the translated text under the key 'translation'.
+                        # For backward compatibility also accept 'translated_text'.
+                        translated_text = result.get('translation') or result.get('translated_text') or 'No translation received'
                         
                         # Store translation
                         st.session_state.last_translation = translated_text

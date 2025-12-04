@@ -5,7 +5,7 @@ FastAPI server for English-Hausa translation API.
 import os
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -15,7 +15,9 @@ import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from src.utils import load_config, setup_logging
-from src.inference.translator import HausaTranslator
+# Importing the translator can trigger heavy imports (transformers).
+# Import it lazily during startup to avoid slowing down test imports.
+
 
 
 # Pydantic models for API
@@ -37,6 +39,7 @@ class BatchTranslationRequest(BaseModel):
 
 class TranslationResponse(BaseModel):
     translation: str
+    translated_text: Optional[str] = None
     source_lang: str
     target_lang: str
     original_text: str
@@ -89,19 +92,29 @@ async def startup_event():
         # Load configuration
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config.yaml')
         config = load_config(config_path)
-        
         # Get model path
         model_path = os.path.join(
             config.get('paths', {}).get('models_dir', './models'),
             config.get('model', {}).get('name', 'english-hausa-translator')
         )
-        
+
+        # Try lazy import of HausaTranslator to avoid heavy imports at module import time
+        try:
+            from src.inference.translator import HausaTranslator  # type: ignore
+        except Exception as ie:
+            logger.warning(f"Could not import HausaTranslator: {ie}")
+            HausaTranslator = None
+
         # Check if model exists, if not use a fallback or demo mode
-        if os.path.exists(model_path):
-            translator = HausaTranslator(model_path, config)
-            logger.info("Model loaded successfully")
+        if os.path.exists(model_path) and HausaTranslator is not None:
+            try:
+                translator = HausaTranslator(model_path, config)
+                logger.info("Model loaded successfully")
+            except Exception as le:
+                logger.error(f"Failed to initialize HausaTranslator: {le}")
+                translator = None
         else:
-            logger.warning(f"Model not found at {model_path}. API will run in demo mode.")
+            logger.warning(f"Model not found at {model_path} or HausaTranslator unavailable. API will run in demo mode.")
             translator = None
             
     except Exception as e:
@@ -153,6 +166,7 @@ async def translate_text(request: TranslationRequest):
         
         return TranslationResponse(
             translation=translation,
+            translated_text=translation,
             source_lang=request.source_lang,
             target_lang=request.target_lang,
             original_text=request.text
@@ -170,6 +184,7 @@ async def translate_text(request: TranslationRequest):
         
         return TranslationResponse(
             translation=translation,
+            translated_text=translation,
             source_lang=request.source_lang,
             target_lang=request.target_lang,
             original_text=request.text
@@ -190,6 +205,7 @@ async def translate_batch(request: BatchTranslationRequest):
         translations = [
             TranslationResponse(
                 translation=f"[DEMO] Translated: {text}",
+                translated_text=f"[DEMO] Translated: {text}",
                 source_lang=request.source_lang,
                 target_lang=request.target_lang,
                 original_text=text
@@ -215,6 +231,7 @@ async def translate_batch(request: BatchTranslationRequest):
         translations = [
             TranslationResponse(
                 translation=translation,
+                translated_text=translation,
                 source_lang=request.source_lang,
                 target_lang=request.target_lang,
                 original_text=original_text
