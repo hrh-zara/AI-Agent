@@ -259,6 +259,10 @@ with tab2:
         ]
     }
     
+    # Helper to set the input text from examples.
+    def _set_input_text(text: str) -> None:
+        st.session_state['input_text'] = text
+
     for category, phrases in examples.items():
         with st.expander(f"📂 {category}", expanded=True):
             for eng, hau in phrases:
@@ -268,9 +272,8 @@ with tab2:
                 with col2:
                     st.write(f"🇳🇬 {hau}")
                 with col3:
-                    if st.button("Try", key=f"example_{eng[:20]}"):
-                        st.session_state.input_text = eng
-                        st.rerun()
+                    # Use on_click callback to set session state before widgets are rendered
+                    st.button("Try", key=f"example_{eng[:20]}", on_click=_set_input_text, args=(eng,))
 
 # TAB 3: History
 with tab3:
